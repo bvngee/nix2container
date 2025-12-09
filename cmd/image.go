@@ -17,7 +17,7 @@ import (
 var fromImageFilename string
 
 var imageArch string
-var created timeValue
+var created string
 
 type timeValue time.Time
 
@@ -40,7 +40,18 @@ var imageCmd = &cobra.Command{
 	Short: "Generate an image.json file from a image configuration and layers",
 	Args:  cobra.MinimumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := image(args[0], args[1], fromImageFilename, args[2:], imageArch, (time.Time)(created))
+		var createdTime time.Time
+		var err error
+		if created == "now" {
+			createdTime = time.Now()
+		} else {
+			createdTime, err = time.Parse(time.RFC3339, created)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+		}
+		err = image(args[0], args[1], fromImageFilename, args[2:], imageArch, createdTime)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err)
 			os.Exit(1)
@@ -169,7 +180,7 @@ func init() {
 	rootCmd.AddCommand(imageCmd)
 	imageCmd.Flags().StringVarP(&fromImageFilename, "from-image", "", "", "A JSON file describing the base image")
 	imageCmd.Flags().StringVarP(&imageArch, "arch", "", runtime.GOARCH, "Target CPU architecture of the image")
-	imageCmd.Flags().Var(&created, "created", "Timestamp at which the image was created")
+	imageCmd.Flags().StringVarP(&created, "created", "", "", "Timestamp at which the image was created, or \"now\"")
 	rootCmd.AddCommand(imageFromDirCmd)
 	rootCmd.AddCommand(imageFromManifestCmd)
 }
